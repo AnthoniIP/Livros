@@ -13,12 +13,10 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.ipsoft.livros.R
 import kotlinx.android.synthetic.main.activity_sign_in.*
 
-class SignInActivity : BaseActivity() {
+class SignInActivity : AppCompatActivity() {
     private var googleApiClient: GoogleApiClient? = null
- 
-    override fun init() {
-        TODO("Not yet implemented")
-    }
+    private var fbAuth = FirebaseAuth.getInstance()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

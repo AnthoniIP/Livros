@@ -78,6 +78,7 @@ import org.parceler.Transient
             field = value
             notifyPropertyChanged(BR.rating)
         }
+    var userId: String = ""
 
     @Transient private var callbacks: PropertyChangeRegistry? = null
 

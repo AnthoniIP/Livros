@@ -6,16 +6,22 @@ import android.os.Bundle
 import android.view.View
 import android.widget.CompoundButton
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
 import com.ipsoft.livros.R
 import com.ipsoft.livros.databinding.ActivityBookFormBinding
 import com.ipsoft.livros.model.Book
 import com.ipsoft.livros.model.MediaType
 import com.ipsoft.livros.model.Publisher
+import com.ipsoft.livros.ui.viewmodels.BookFormViewModel
+import kotlinx.android.synthetic.main.book_form_content.*
 import org.parceler.Parcels
 
 class BookFormActivity : BaseActivity() {
+    private val viewModel: BookFormViewModel by lazy {
+        ViewModelProviders.of(this).get(BookFormViewModel::class.java)
+    }
     private val binding: ActivityBookFormBinding by lazy {
         DataBindingUtil.setContentView<ActivityBookFormBinding>(
             this, R.layout.activity_book_form
@@ -23,7 +29,24 @@ class BookFormActivity : BaseActivity() {
     }
 
     override fun init() {
-        TODO("Not yet implemented")
+        viewModel.showProgress().observe(this, Observer { loading ->
+            loading?.let {
+                btnSave.isEnabled = !loading
+                binding.content.progressBar.visibility = if (it) View.VISIBLE else View.GONE
+
+
+            }
+        })
+        viewModel.savingOperation().observe(this, Observer { success ->
+            success?.let {
+                if (success) {
+                    showMessageSucess()
+                    finish()
+                } else {
+                    showMessageError()
+                }
+            }
+        })
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,18 +80,21 @@ class BookFormActivity : BaseActivity() {
     }
 
     fun clickSaveBook(view: View) {
-        val book = binding.content.book
-        if (book != null) {
-            val s = "${book.title} \n" +
-                    "${book.author} \n" +
-                    "${book.publisher?.name} \n" +
-                    "${book.pages} \n" +
-                    "${book.year} \n" +
-                    "${book.available} \n" +
-                    "${book.rating} \n" +
-                    "${book.mediaType}"
-            Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
+       val book = binding.content.book
+        if(book != null) {
+            try {
+                viewModel.saveBook(book)
+            }catch(e: Exception) {
+                showMessageError()
+            }
         }
+    }
+    private fun showMessageSucess() {
+        Toast.makeText(this, R.string.message_book_saved, Toast.LENGTH_SHORT).show()
+    }
+    private fun showMessageError() {
+        Toast.makeText(this, R.string.message_error_book_saved, Toast.LENGTH_SHORT).show()
+
     }
 
     companion object {
