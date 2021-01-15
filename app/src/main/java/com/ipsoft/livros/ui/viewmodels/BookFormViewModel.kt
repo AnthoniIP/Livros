@@ -6,6 +6,7 @@ import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
 import com.ipsoft.livros.firebase.FbRepository
 import com.ipsoft.livros.model.Book
+import java.io.File
 
 /**
  *
@@ -15,12 +16,14 @@ import com.ipsoft.livros.model.Book
  */
 
 class BookFormViewModel : ViewModel() {
+    var tempImageFile: File? = null
     private val repo = FbRepository()
     var book: Book? = null
 
     private var showProgress = MutableLiveData<Boolean>().apply {
         value = false
     }
+
     private var saveBook = MutableLiveData<Book>()
     private var savingBookOperation = Transformations.switchMap(saveBook) { book ->
         showProgress.value = true
@@ -35,5 +38,16 @@ class BookFormViewModel : ViewModel() {
 
     fun saveBook(book: Book) {
         saveBook.value = book
+    }
+
+    fun deleteTempPhoto() {
+        tempImageFile?.let {
+            if (it.exists()) it.delete()
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        deleteTempPhoto()
     }
 }

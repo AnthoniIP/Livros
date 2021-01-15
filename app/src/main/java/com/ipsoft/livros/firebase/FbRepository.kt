@@ -1,10 +1,17 @@
 package com.ipsoft.livros.firebase
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.lifecycle.LiveData
+import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
+import com.google.firebase.storage.FirebaseStorage
 import com.ipsoft.livros.model.Book
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 
 /**
  *
@@ -17,6 +24,7 @@ class FbRepository {
     private val fbAuth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
     private val currentUser = fbAuth.currentUser
+    private val storageRef = FirebaseStorage.getInstance().reference.child(BOOKS_KEY)
 
     fun saveBook(book: Book): LiveData<Boolean> {
 
@@ -37,17 +45,54 @@ class FbRepository {
                     }
                 } else {
                     collection.document(book.id)
-                        .set(book, SetOptions.merge())
+                        .set(book)
                 }
                 saveTask.addOnSuccessListener {
-                    value = true
+                    if (book.coverUrl.startsWith("file://")) {
+                        uploadFile()
+                    } else {
+                        value = true
+                    }
                 }.addOnFailureListener {
                     value = false
+                }
+            }
+
+            private fun uploadFile() {
+                uploadPhoto(book).continueWithTask { uriTask ->
+                    File(book.coverUrl).delete()
+                    book.coverUrl = uriTask.result.toString()
+                    firestore.collection(BOOKS_KEY)
+                        .document(book.id)
+                        .update(COVER_URL_KEY, book.coverUrl)
+                }.addOnCompleteListener { task ->
+                    value = task.isSuccessful
                 }
             }
         }
 
     }
+
+    private fun uploadPhoto(book: Book): Task<Uri> {
+        compressPhoto(book.coverUrl)
+        val storageRef = storageRef.child(book.id)
+        return storageRef.putFile(Uri.parse(book.coverUrl))
+            .continueWithTask { uploadTask ->
+                uploadTask.result?.storage?.downloadUrl
+            }
+    }
+
+    private fun compressPhoto(path: String) {
+        val imgFile = File(path.substringAfter("file://"))
+        val bos = ByteArrayOutputStream()
+        val bmp = BitmapFactory.decodeFile(imgFile.absolutePath)
+        bmp.compress(Bitmap.CompressFormat.JPEG, 70, bos)
+        val fos = FileOutputStream(imgFile)
+        fos.write(bos.toByteArray())
+        fos.flush()
+        fos.close()
+    }
+
 
     fun loadBooks(): LiveData<List<Book>> {
         return object : LiveData<List<Book>>() {
@@ -58,7 +103,7 @@ class FbRepository {
                     .addSnapshotListener { querySnapshot, firebaseFirestoreException ->
                         if (firebaseFirestoreException == null) {
                             val books = querySnapshot?.map { document ->
-                                val book =  document.toObject(Book::class.java)
+                                val book = document.toObject(Book::class.java)
                                 book.id = document.id
                                 book
                             }
@@ -94,7 +139,8 @@ class FbRepository {
         }
 
     }
-    fun remove(book: Book) : LiveData<Boolean> {
+
+    fun remove(book: Book): LiveData<Boolean> {
         return object : LiveData<Boolean>() {
             override fun onActive() {
                 super.onActive()
@@ -102,9 +148,13 @@ class FbRepository {
                 db.collection(BOOKS_KEY)
                     .document(book.id)
                     .delete()
-                    .addOnCompleteListener {
-                        value = it.isSuccessful
-                    }
+                    .continueWithTask { task ->
+                        if (task.isSuccessful) {
+                            storageRef.child(book.id).delete()
+                        } else {
+                            throw Exception(task.exception)
+                        }
+                    }.addOnCompleteListener { value = it.isSuccessful }
             }
 
         }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout
-    xmlns:android="http://schemas.android.com/apk/res/android">
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <data>
         <import type="java.util.List"/>
@@ -20,6 +20,16 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:padding="16dp">
+        <ImageView
+            android:layout_gravity="center"
+            android:id="@+id/imgCoverPhoto"
+            android:layout_width="144dp"
+            android:layout_height="144dp"
+            android:background="@android:color/darker_gray"
+            android:scaleType="centerInside"
+            android:onClick="@{view::clickTakePhoto}"
+            app:imageUrl="@{book.coverUrl}"
+            />
         <EditText
             android:id="@+id/edtTitle"
             android:layout_width="match_parent"
