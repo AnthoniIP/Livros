@@ -58,7 +58,7 @@ class FbRepository {
                     .addSnapshotListener { querySnapshot, firebaseFirestoreException ->
                         if (firebaseFirestoreException == null) {
                             val books = querySnapshot?.map { document ->
-                                val book = document.toObject(Book::class.java)
+                                val book =  document.toObject(Book::class.java)
                                 book.id = document.id
                                 book
                             }
